@@ -1,0 +1,468 @@
+You are acting as a Principal Solution Architect, Senior Full Stack Engineer, FinOps-aware Cloud Architect, and Indian compliance/payment domain consultant.
+
+I want you to review the entire attached codebase and assess whether it can be adopted, restructured, or migrated for our internal company expense management use case.
+
+## 1. Business Context
+
+We want to build or adapt this application to manage expenses for a small internal team of around 3 to 4 people.
+
+The application should support the Indian business expense ecosystem, including:
+
+- Indian payment methods such as UPI, bank transfer, credit/debit card, wallets, and cash
+- GST-related fields and validations where applicable
+- Vendor GSTIN capture and validation pattern
+- Invoice/bill upload and storage
+- Expense approval workflow
+- Expense reimbursement tracking
+- Basic tax categorisation
+- Receipt OCR or document intelligence support if already available or feasible
+- Audit trail for expense submission, approval, rejection, and payment
+- Export capability for accounting or finance review
+
+Please consider Indian GST requirements. For example, GST e-invoice is used for B2B invoice authentication through the Invoice Registration Portal, which generates IRN, digitally signed invoice, and QR code. Also, e-way bill applies to movement of goods above specified threshold conditions, so clearly separate what is relevant and not relevant for a small internal expense app. Official GST e-invoice and e-way bill portals should be treated as reference points only unless formal integration is required. 
+References: GST e-Invoice Portal, NIC GST e-Invoice, and GST E-Way Bill portal. 
+
+## 2. Existing Target Architecture Preference
+
+Our preferred enterprise architecture is:
+
+### Frontend
+- React-based frontend
+- Should be possible to open this expense app in a separate browser tab from our existing web application
+- It can either be integrated into the existing React app or deployed as a separate modular frontend
+- Authentication should ideally align with Microsoft Entra ID / Azure AD if required
+
+### Backend
+- Python-based Azure Function App
+- REST APIs for expense, users, approval, payment status, GST metadata, attachments, and reports
+- APIs should be modular and maintainable
+
+### Database
+- Supabase is currently preferred as the database layer
+- Supabase may also be used for vector/embedding capabilities if already part of the solution
+- Assess whether Supabase is suitable for this use case or whether Azure-native alternatives should be considered
+
+### Storage
+- Azure Blob Storage for storing uploaded bills, invoices, receipts, supporting documents, and exported reports
+- Files should be stored securely with metadata linked to database records
+
+### AI / Embedding Engine
+- Supabase embedding/vector capability may be used if the existing codebase already contains semantic search, receipt classification, expense matching, or RAG-style functionality
+- Assess whether embedding is truly needed for a 3 to 4 user expense app or whether it adds unnecessary complexity
+- If useful, suggest practical AI use cases such as:
+  - Searching old receipts
+  - Auto-classifying expenses
+  - Detecting duplicate bills
+  - Extracting vendor, GSTIN, date, amount, tax, and invoice number
+  - Generating monthly summaries
+
+### Hosting Option
+We are open to either:
+1. React frontend + Python Azure Functions + Supabase + Blob Storage
+2. A fully containerised modular application hosted on Azure Container Apps
+3. Hybrid model where frontend is hosted separately and backend APIs run as containers or Azure Functions
+
+Please evaluate which option is better based on simplicity, cost, maintainability, security, and future extensibility.
+
+## 3. Codebase Review Scope
+
+Review the complete codebase and provide a detailed assessment across the following areas:
+
+### A. Application Understanding
+- What does the current application do?
+- What are the main modules?
+- What frontend framework and patterns are used?
+- What backend framework/runtime is used?
+- What database/storage dependencies exist?
+- What authentication and authorization mechanism is implemented?
+- What deployment model is currently assumed?
+- What configuration or environment variables are used?
+
+### B. Fitment for Our Use Case
+Assess whether the current solution fits our requirement for a small Indian company/team expense management app.
+
+Classify each feature as:
+- Directly reusable
+- Reusable with minor changes
+- Requires major refactoring
+- Not required
+- Missing and needs to be built
+
+### C. Architecture Gap Analysis
+Compare the current architecture with our desired architecture:
+
+- React frontend
+- Python Azure Function App backend
+- Supabase database and embedding engine
+- Azure Blob Storage for documents
+- Optional Azure Container Apps deployment
+- Indian payment and GST readiness
+- Secure authentication and role-based access control
+- Audit logging
+- Reporting/exporting
+
+Provide a gap table with:
+- Current state
+- Desired state
+- Gap
+- Recommendation
+- Priority: High / Medium / Low
+
+### D. Indian Payment and GST Readiness
+Review whether the codebase supports or can be extended to support:
+
+- Payment mode tracking: UPI, bank transfer, card, cash, wallet
+- UPI transaction/reference ID field
+- Bank reference number
+- Vendor GSTIN
+- Invoice number
+- Invoice date
+- HSN/SAC code if relevant
+- CGST, SGST, IGST, total GST amount
+- Taxable amount
+- Total invoice amount
+- Reverse charge flag if required
+- GST category
+- Reimbursement status
+- Settlement date
+- Payment proof upload
+
+Important: Do not over-engineer GST compliance. This is primarily an internal expense management app for 3 to 4 people. Recommend only the practical GST fields and controls we need. Clearly call out what is optional, mandatory, or unnecessary.
+
+### E. Data Model Review
+Review the existing database schema and recommend a target schema.
+
+At minimum, consider these entities:
+
+- users
+- roles
+- expense_claims
+- expense_items
+- vendors
+- payments
+- attachments
+- approval_workflow
+- audit_logs
+- gst_metadata
+- categories
+- comments
+- notifications
+
+For each table/entity, recommend:
+- Key columns
+- Primary key
+- Foreign keys
+- Indexes
+- Security considerations
+- Whether row-level security is required in Supabase
+- Data retention recommendation
+
+### F. API Review
+Review the backend/API layer and recommend target APIs.
+
+Include APIs such as:
+
+- Create expense claim
+- Update draft expense
+- Submit expense
+- Approve expense
+- Reject expense
+- Upload receipt
+- Download receipt securely
+- Extract receipt metadata
+- Update payment status
+- Add reimbursement reference
+- List expenses by user/status/date
+- Generate monthly report
+- Export CSV/Excel/PDF
+- Search expenses
+- Get GST summary
+
+For each API, recommend:
+- HTTP method
+- Endpoint path
+- Request payload
+- Response payload
+- Authentication requirement
+- Authorization rule
+- Error handling
+- Validation requirement
+
+### G. Frontend Review
+Review the React frontend structure and recommend changes for:
+
+- Dashboard
+- My expenses
+- Create expense
+- Upload receipt
+- Approval queue
+- Payment tracking
+- Reports
+- Admin settings
+- Vendor master
+- Category master
+- GST fields
+- Search/filter
+- Mobile responsiveness
+
+Also recommend whether this should be:
+1. Integrated into our existing React app as a module
+2. Opened in a separate browser tab as a separate micro-frontend or standalone app
+3. Hosted as a separate containerised frontend
+
+Give a clear recommendation with pros and cons.
+
+### H. Backend Restructuring Recommendation
+If the current backend is not aligned with Python Azure Functions, recommend how to migrate it.
+
+Target structure should be something like:
+
+- functions/
+  - expenses/
+  - approvals/
+  - payments/
+  - attachments/
+  - reports/
+  - vendors/
+  - gst/
+  - ai_extraction/
+- shared/
+  - auth.py
+  - db.py
+  - storage.py
+  - validators.py
+  - logging.py
+  - config.py
+- tests/
+- infra/
+- deployment/
+
+Recommend whether Azure Functions or Azure Container Apps is better.
+
+Compare:
+
+Azure Functions:
+- Pros
+- Cons
+- Best fit scenarios
+
+Azure Container Apps:
+- Pros
+- Cons
+- Best fit scenarios
+
+Then provide final recommendation for this small team use case.
+
+### I. Security Review
+Review the codebase for security gaps:
+
+- Authentication
+- Authorization
+- Role-based access
+- Secrets management
+- Environment variable leakage
+- Storage access control
+- Signed URL/SAS usage
+- File upload validation
+- File scanning recommendation
+- Injection risks
+- API input validation
+- CORS
+- Audit logging
+- PII protection
+- Least privilege access
+- Supabase RLS policies
+- Azure Managed Identity usage if applicable
+
+Provide:
+- Critical security issues
+- Recommended fixes
+- Target security model
+
+### J. Azure Integration Review
+Recommend how this application should be hosted on Azure.
+
+Consider:
+
+- Azure Static Web Apps or Azure App Service for React frontend
+- Azure Function App for Python APIs
+- Azure Container Apps if containerised
+- Azure Blob Storage for receipts
+- Key Vault for secrets
+- Application Insights for monitoring
+- Log Analytics for centralised logging
+- Managed Identity where possible
+- Azure DevOps or GitHub Actions CI/CD
+- Private networking if required later
+
+Provide a recommended Azure architecture for:
+1. Minimal cost version
+2. More robust production-ready version
+
+### K. AI and Document Processing Review
+If the codebase contains AI, OCR, embeddings, vector search, or document processing, review it carefully.
+
+Recommend whether to use:
+
+- Supabase vector search
+- Azure AI Document Intelligence
+- Azure OpenAI
+- Simple rule-based extraction
+- No AI for MVP
+
+For our small team expense app, clearly classify AI features as:
+
+- Must have
+- Good to have
+- Avoid for now
+
+### L. Migration / Restructuring Plan
+Provide a phased migration plan.
+
+Suggested phases:
+
+Phase 1: Codebase assessment and cleanup  
+Phase 2: Data model alignment  
+Phase 3: Backend migration to Python Azure Functions or Container Apps  
+Phase 4: React frontend adaptation  
+Phase 5: Blob Storage integration  
+Phase 6: Indian payment and GST fields  
+Phase 7: Authentication and RBAC  
+Phase 8: Reporting and export  
+Phase 9: Optional AI/OCR/embedding features  
+Phase 10: CI/CD and deployment  
+
+For each phase, provide:
+- Objective
+- Tasks
+- Output
+- Risk
+- Estimated complexity: Low / Medium / High
+
+### M. MVP Recommendation
+Define the minimum viable version for our company.
+
+MVP should include:
+
+- User login
+- Create expense
+- Upload receipt
+- Select payment mode
+- Capture GST fields where applicable
+- Submit for approval
+- Approve/reject
+- Track reimbursement
+- Store files in Blob
+- Store records in Supabase
+- Basic dashboard
+- Monthly export
+
+Clearly identify what should not be included in MVP.
+
+### N. Deliverables Expected From You
+
+After reviewing the codebase, provide the following outputs:
+
+1. Executive summary
+2. Current architecture summary
+3. Fitment score out of 10
+4. Reuse vs rebuild recommendation
+5. Architecture gap analysis
+6. Recommended target architecture
+7. Frontend restructuring recommendation
+8. Backend restructuring recommendation
+9. Database/schema recommendation
+10. Blob Storage document design
+11. Indian payment and GST readiness assessment
+12. Security review
+13. Azure hosting recommendation
+14. Containerisation recommendation
+15. AI/embedding usefulness assessment
+16. Migration roadmap
+17. MVP scope
+18. Risks and assumptions
+19. Final recommendation
+
+## 4. Important Constraints
+
+- Keep the solution simple because the target user base is only 3 to 4 people initially
+- Avoid enterprise over-engineering unless there is a strong reason
+- Design should still be secure, modular, and extensible
+- Prefer cost-effective Azure services
+- Prefer maintainable architecture over complex microservices
+- Avoid unnecessary AI/embedding unless it genuinely helps
+- Ensure Indian payment and GST fields are practical and usable
+- Recommend a clear path: reuse, refactor, containerise, or rebuild
+
+## 5. Output Format
+
+Please provide the response in this structure:
+
+# 1. Executive Summary
+
+# 2. Current Codebase Understanding
+
+# 3. Fitment for Our Expense Management Use Case
+
+# 4. Architecture Gap Analysis
+
+# 5. Recommended Target Architecture
+
+# 6. Frontend Recommendation
+
+# 7. Backend Recommendation
+
+# 8. Database and Supabase Recommendation
+
+# 9. Azure Blob Storage Design
+
+# 10. Indian Payment and GST Design
+
+# 11. Security and Compliance Review
+
+# 12. AI / Embedding / OCR Recommendation
+
+# 13. Hosting Option Comparison
+
+Compare:
+- Azure Functions
+- Azure Container Apps
+- Hybrid model
+
+# 14. MVP Scope
+
+# 15. Migration Roadmap
+
+# 16. Risks, Assumptions, and Open Questions
+
+# 17. Final Recommendation
+
+
+####Short Version prompt
+Review the entire codebase and assess whether we can adopt it for our internal Indian expense management app for 3 to 4 users.
+
+Target architecture:
+- React frontend
+- Python Azure Function App backend
+- Supabase database and optional embedding/vector engine
+- Azure Blob Storage for receipts and invoices
+- Optional containerised deployment on Azure Container Apps
+- App can open in a separate browser tab from our existing web app
+
+Review:
+1. Current architecture and modules
+2. Fitment for our use case
+3. Reuse vs refactor vs rebuild recommendation
+4. React frontend changes required
+5. Python Azure Functions backend restructuring
+6. Supabase schema recommendation
+7. Blob Storage document design
+8. Indian payment support: UPI, bank transfer, card, cash, wallet
+9. GST fields: GSTIN, invoice number, invoice date, taxable amount, CGST, SGST, IGST, total GST, total amount
+10. Security gaps: auth, RBAC, secrets, file upload, audit logs, Supabase RLS
+11. Hosting comparison: Azure Functions vs Azure Container Apps vs hybrid
+12. MVP scope and migration roadmap
+
+Keep the recommendation practical and avoid over-engineering because the initial user base is only 3 to 4 people. Provide final recommendation with phased migration plan, API routes, database tables, folder structure, risks, and assumptions.
+
+Be practical, direct, and architecture-focused. Where possible, suggest exact folder structures, API routes, database tables, environment variables, and deployment options.
